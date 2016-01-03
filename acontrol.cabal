@@ -1,0 +1,36 @@
+name:                acontrol
+version:             0.1.0.0
+license-file:        LICENSE
+author:              fl3
+maintainer:          not.fl3@gmail.com
+build-type:          Simple
+cabal-version:       >=1.10
+
+executable acontrol
+  hs-source-dirs: src
+  main-is:             Main.hs
+  other-extensions:    OverloadedStrings, GADTs, DataKinds, TypeOperators
+  build-depends: Spock
+               , Spock-digestive
+               , base >=4.7 && <4.8
+               , base16-bytestring >= 0.1.1.6
+               , blaze-bootstrap
+               , blaze-html
+               , bytestring >= 0.10.4.0
+               , cryptohash >= 0.11.6
+               , digestive-bootstrap
+               , digestive-functors
+               , hvect >=0.3 && <0.4
+               , mtl >= 2.1.3.1
+               , network >= 2.6.2.1
+               , persistent >= 2.2.4
+               , persistent-mongoDB
+               , persistent-template
+               , random >= 1.0.1.1
+               , resource-pool >= 0.2.3.2
+               , template-haskell
+               , text
+               , time >= 1.4.2
+               , wai-middleware-static >=0.8 && <0.9
+               , word8 >= 0.1.2
+  default-language:    Haskell2010
