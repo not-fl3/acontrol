@@ -8,6 +8,7 @@ module Views(
   mkSiteTasks,
   mkSiteText,
   mkSiteForm,
+  makeViewWithError,
   module Views.TasksView,
   ) where
 
@@ -39,7 +40,8 @@ import qualified Heist.Interpreted as I
 
 import           Db
 
-import qualified Text.Digestive.Heist as HE
+
+import qualified Text.Digestive.Heist as HI
 import qualified Text.Digestive.Heist.Compiled as HE
 import qualified Text.Digestive.View as HE
 
@@ -71,7 +73,7 @@ runForm formName form = do
     GET -> do
       view <- HE.getForm formName form
 --      mkSite'' [] [("container", HE.formSplice mempty mempty (return view))]
-      mkSite'' [] [("container", template (T.unpack formName)), ("formdata", HE.formSplice mempty mempty (return view))]
+--      mkSite'' [] [("container", template (T.unpack formName)), ("formdata", HE.formSplice mempty mempty (return view))]
       return (view, Nothing)
     POST -> HE.postForm formName form (const $ return env)
 
@@ -90,6 +92,11 @@ renderSplices (isplices, csplices) = do
 
 mkSite'' i s = getSplices i s . getSiteData <$> readSession >>= liftIO . renderSplices >>= html . decodeUtf8
 
+mkSite' i s = do
+  (_, t) <- getSplices [] s . getSiteData <$> readSession
+  bs <- liftIO $ renderSplices (i, t)
+  html $ decodeUtf8 $ bs
+
 getSplices ilst lst (Site a) = let log = if isJust a then "fornotloginned" else "forloginned"
                                    splices = do
                                      mapM_ (uncurry (##)) lst
@@ -107,8 +114,11 @@ mkSiteTemplate :: T.Text -> AAction a b
 mkSiteTemplate t = mkSite'' [] [("container", template $ T.unpack t)]
 
 mkSiteText :: T.Text -> AAction a b
-mkSiteText text = mkSite'' [("container", I.textSplice text)] []
+mkSiteText text = mkSite'' [("text", I.textSplice text)] [("container", template "textpanel")]
 
-mkSiteForm formName view = mkSite'' [] [("container", template (T.unpack formName)), ("formdata", HE.formSplice mempty mempty (return view))]
+mkSiteForm :: B8.ByteString -> HE.View T.Text -> AAction a b
+mkSiteForm formName view = mkSite'' [("container", I.callTemplate formName $ HI.digestiveSplices view)] []
 
 
+makeViewWithError :: HE.View T.Text -> T.Text -> HE.View T.Text
+makeViewWithError view err = view {HE.viewErrors = [([T.pack ""], err)]}

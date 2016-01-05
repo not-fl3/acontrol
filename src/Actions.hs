@@ -32,6 +32,8 @@ import           Model.TaskState
 import           Db
 import           Types
 
+import           Text.Digestive.View
+
 rootAction :: AAction (HVect xs) ()
 rootAction = do
   s <- readSession
@@ -70,7 +72,7 @@ loginAction = do
                 writeSession (Just (sid, userId))
                 redirect "/"
            Nothing ->
-             mkSiteText  "Invalid login"
+             mkSiteForm "loginForm" $ makeViewWithError view "Invalid login credentials!"
 
 createSession userId =
     do now <- liftIO getCurrentTime
@@ -84,14 +86,14 @@ registerAction =
              mkSiteForm "registerForm" view
          (view, Just registerReq) ->
              if rr_password registerReq /= rr_passwordConfirm registerReq
-             then mkSiteText "Password doesnot match"
+             then mkSiteForm "registerForm" $ makeViewWithError view "Password dont match!"
              else do registerRes <-
                          runDb $ registerUser (rr_username registerReq) (rr_email registerReq) (rr_password registerReq)
                      case registerRes of
                        CommonError errMsg ->
-                           mkSiteText  $ errMsg
+                         mkSiteForm "registerForm" $ makeViewWithError view errMsg
                        CommonSuccess _ ->
-                           mkSiteText  $ "Register success"
+                         mkSiteText  "Registered successeful!"
 
 startTaskAction id = do
   let objectid = read id :: ObjectId
