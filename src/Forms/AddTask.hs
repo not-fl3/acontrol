@@ -1,9 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Forms.AddTask where
 
-import Text.Blaze.Html (Html)
-import Text.Digestive hiding (Post)
-import Text.Digestive.Bootstrap
+import           Text.Digestive
+
+import qualified Data.Text as T
 
 import Control.Applicative
 
@@ -15,8 +15,8 @@ import Forms.Common
 import Model.TaskState
 import Model.Types
 
-postForm :: Monad m => UserId -> UTCTime -> Form Html m Task
-postForm uid time = createTask uid time
+addTaskForm :: Monad m => UserId -> UTCTime -> Form T.Text m Task
+addTaskForm uid time = createTask uid time
                    <$> ("name" .: text Nothing)
                    <*> ("active" .: bool Nothing)
                    <*> ("allowed" .: text Nothing)
@@ -30,15 +30,15 @@ postForm uid time = createTask uid time
           taskAllowedWindows = allowed
           }
 
-postFormSpec :: FormMeta
-postFormSpec =
-    FormMeta
-    { fm_method = POST
-    , fm_target = "/addtask"
-    , fm_elements =
-        [ FormElement "name" (Just "Title:") InputText,
-          FormElement "active" (Just "Start now:") InputCheckbox,
-          FormElement "allowed" (Just "Semicolumnt(;)-separated list of keywords, that must be in opened windows (empty for no restrictions):") InputText
-        ]
-    , fm_submitText = "Publish"
-    }
+-- postFormSpec :: FormMeta
+-- postFormSpec =
+--     FormMeta
+--     { fm_method = POST
+--     , fm_target = "/addtask"
+--     , fm_elements =
+--         [ FormElement "name" (Just "Title:") InputText,
+--           FormElement "active" (Just "Start now:") InputCheckbox,
+--           FormElement "allowed" (Just "Semicolumnt(;)-separated list of keywords, that must be in opened windows (empty for no restrictions):") InputText
+--         ]
+--     , fm_submitText = "Publish"
+--     }

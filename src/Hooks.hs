@@ -7,9 +7,6 @@ module Hooks where
 
 import           Data.HVect
 import           Web.Spock.Safe hiding (SessionId)
-import           Text.Blaze.Html.Renderer.String
-import qualified Text.Blaze.XHtml5 as H
-import qualified Data.Text as L
 
 import           Database.Persist hiding (get)
 import           Database.Persist.MongoDB hiding (get)
@@ -53,13 +50,13 @@ authHook :: AAction (HVect xs) (HVect ((UserId, User) ': xs))
 authHook = do
   sess <- readSession
   case sess of
-    Nothing -> mkSite' $ noAccessPage "Unknown user. Login first!"
+    Nothing -> mkSiteText $ "Unknown user. Login first!"
     Just (sid, uid) ->
       do oldCtx <- getContext
          mUser <- runDb $ loadUser sid
          case mUser of
            Nothing ->
-             mkSite' $ noAccessPage "Unknown user. Login first!"
+             mkSiteText $ "Unknown user. Login first!"
            Just val ->
              return (val :&: oldCtx)
 

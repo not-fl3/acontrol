@@ -7,9 +7,7 @@ module Actions where
 
 import           Data.HVect
 import           Web.Spock.Safe hiding (SessionId)
-import           Text.Blaze.Html.Renderer.String
-import           Web.Spock.Digestive
-import           Text.Digestive.Bootstrap (renderForm)
+
 import qualified Data.Text as T
 
 import           Database.Persist.MongoDB hiding (get)
@@ -34,73 +32,66 @@ import           Model.TaskState
 import           Db
 import           Types
 
-
 rootAction :: AAction (HVect xs) ()
 rootAction = do
   s <- readSession
   case s of
-    Nothing -> html $ T.pack $ renderHtml $ site (getSiteData s) notLoginned
+    Nothing -> mkSiteTemplate "notloginned"
     Just (_, uid)  -> do
-      time <- liftIO getCurrentTime
       allTasks <- runDb $ selectList [TaskAuthor ==. uid, TaskDone ==. False] [Desc TaskName]
-      html $ T.pack $ renderHtml $ site (getSiteData s) $ tasksView allTasks time
+      mkSiteTasks allTasks
 
 writeAction :: (ListContains m (UserId, User) xs) => AAction (HVect xs) a
 writeAction =
-    do s@(Just (_, uid)) <- readSession
+    do (Just (_, uid)) <- readSession
        time <- liftIO getCurrentTime
-       f <- runForm "writePost" (postForm uid time)
-       let formView mErr view =
-               panelWithErrorView "Write a Post" mErr $ renderForm postFormSpec view
+       f <- runForm "addTask" (addTaskForm uid time)
        case f of
          (view, Nothing) ->
-           html $ T.pack $ renderHtml $ site (getSiteData s) (formView Nothing view)
+           mkSiteForm "addTask" view
          (_, Just newPost) -> do
             _ <- runDb $ insert newPost
             redirect "/"
+
+
+
+
 loginAction ::
   (ListContains n IsGuest xs, NotInList (UserId, User) xs ~ 'True) => AAction (HVect xs) a
-loginAction =
-    do f <- runForm "loginForm" loginForm
-       let formView mErr view =
-               panelWithErrorView "Login" mErr $ renderForm loginFormSpec view
-       case f of -- (View, Maybe LoginRequest)
-         (view, Nothing) ->
-             mkSite' (formView Nothing view)
-         (view, Just loginReq) ->
-             do loginRes <- runDb $ loginUser (lr_user loginReq) (lr_password loginReq)
-                case loginRes of
-                  Just userId ->
-                      do sid <- runDb $ createSession userId
-                         writeSession (Just (sid, userId))
-                         redirect "/"
-                  Nothing ->
-                      mkSite' (formView (Just "Invalid login credentials!") view)
+loginAction = do
+  (view, res) <- runForm "loginForm" loginForm
+  case res of
+    Nothing -> mkSiteForm "loginForm" view
+    Just loginReq ->
+      do loginRes <- runDb $ loginUser (lr_user loginReq) (lr_password loginReq)
+         case loginRes of
+           Just userId ->
+             do sid <- runDb $ createSession userId
+                writeSession (Just (sid, userId))
+                redirect "/"
+           Nothing ->
+             mkSiteText  "Invalid login"
 
 createSession userId =
     do now <- liftIO getCurrentTime
        insert (Session (addUTCTime (5 * 3600) now) userId)
 
-
-
 registerAction :: (ListContains n IsGuest xs, NotInList (UserId, User) xs ~ 'True) => AAction (HVect xs) a
 registerAction =
     do f <- runForm "registerForm" registerForm
-       let formView mErr view =
-               panelWithErrorView "Register" mErr $ renderForm registerFormSpec view
        case f of
          (view, Nothing) ->
-             mkSite' (formView Nothing view)
+             mkSiteForm "registerForm" view
          (view, Just registerReq) ->
              if rr_password registerReq /= rr_passwordConfirm registerReq
-             then mkSite' (formView (Just "Passwords do not match") view)
+             then mkSiteText "Password doesnot match"
              else do registerRes <-
                          runDb $ registerUser (rr_username registerReq) (rr_email registerReq) (rr_password registerReq)
                      case registerRes of
                        CommonError errMsg ->
-                           mkSite' (formView (Just errMsg) view)
+                           mkSiteText  $ errMsg
                        CommonSuccess _ ->
-                           mkSite' (panelWithErrorView "Register - Success!" Nothing "Great! You may now login.")
+                           mkSiteText  $ "Register success"
 
 startTaskAction id = do
   let objectid = read id :: ObjectId
